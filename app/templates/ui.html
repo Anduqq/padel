@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Padel Americano</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121821; --edge:#1f2937; --text:#e5e7eb; --muted:#94a3b8;
+      --chip:#0f172a; --chip-active:#a7333f; --accent:#800000; --input:#0e1420;
+      --table-header:#0f172a; --hover:#0f1520;
+    }
+    *{box-sizing:border-box}
+    body{background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; max-width:960px; margin:24px auto; padding:0 12px}
+    .muted{color:var(--muted)}
+    .card{background:var(--panel); border:1px solid var(--edge); border-radius:16px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,.35); margin:16px 0}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+    input,button{font:inherit}
+    input{background:var(--input); border:1px solid var(--edge); color:var(--text); border-radius:12px; padding:10px}
+    button.btn{padding:10px 14px; border:1px solid var(--edge); border-radius:12px; background:var(--chip); color:var(--text); cursor:pointer}
+    button.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+    .grid{display:grid; grid-template-columns:1fr; gap:16px}
+
+    .chips{display:flex; flex-wrap:wrap; gap:8px}
+    .chip{border:1px solid var(--edge); background:var(--chip); color:var(--text); padding:8px 12px; border-radius:999px; cursor:pointer; user-select:none}
+    .chip.active{background:var(--chip-active); border-color:var(--chip-active); color:#fff}
+    .chip small{opacity:.75; margin-left:6px}
+
+    .court{background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:12px; margin:10px 0}
+    .court-title{font-weight:700; margin-bottom:8px}
+    .teams{display:flex; gap:8px; align-items:center; margin-bottom:8px}
+    .scorebar{display:flex; gap:16px; align-items:center; flex-wrap:wrap}
+    .scoregroup{display:flex; align-items:center; gap:6px}
+    .scoregroup .step{width:32px; height:32px; border-radius:8px; border:1px solid var(--edge); background:var(--chip); color:var(--text)}
+    .scoregroup input{width:64px; text-align:center}
+    .quick{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto}
+    .quick .qbtn{padding:8px 12px; border:1px solid var(--edge); border-radius:10px; background:var(--chip); color:var(--text); cursor:pointer}
+
+    table{width:100%; border-collapse:collapse}
+    th,td{padding:10px 12px; border-bottom:1px solid var(--edge); text-align:left}
+    thead th{position:sticky; top:0; background:var(--table-header)}
+    tbody tr:hover{background:var(--hover)}
+
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.6);}
+    .modal.show{display:flex}
+    .modal .box{background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:16px; width:min(560px, 92vw)}
+    .pill{display:inline-flex; align-items:center; gap:8px; background:var(--chip); border:1px solid var(--edge); border-radius:999px; padding:6px 10px; margin:4px 6px 0 0}
+    .pill button{border:none; background:transparent; color:var(--muted); cursor:pointer}
+  </style>
+</head>
+<body>
+  <h2>Padel Americano</h2>
+
+  <div class="card">
+    <h3>Create tournament</h3>
+    <div class="row">
+      <input id="name" placeholder="Name" value="Friday Americano" style="flex:1; min-width:220px">
+      <input id="courts" type="number" min="1" value="2" style="width:120px">
+      <button class="btn primary" id="btnCreate" onclick="createTournament()">Create</button>
+      <button class="btn" onclick="openUserModal()">Edit users</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <p class="muted" style="margin:0 0 8px">Players (click to select). We remember previous players and sort by frequency.</p>
+      <div id="chips" class="chips"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="newPlayer" placeholder="Add player" style="flex:1; min-width:220px" onkeydown="if(event.key==='Enter') addPlayer()">
+        <button class="btn" onclick="addPlayer()">Add</button>
+      </div>
+      <div id="createResult" class="muted" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div id="panel" class="card" style="display:none">
+    <div class="row">
+      <h3 id="tname" style="margin-right:8px"></h3>
+      <span class="muted" id="tcourts" title="Courts and players"></span>
+    </div>
+    <div id="roundBox" class="card" style="display:none">
+      <h4 id="roundTitle" style="margin:0 0 8px"></h4>
+      <div id="matches"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="btnSubmit" onclick="submitScores()">Submit scores</button>
+        <button class="btn" id="btnNext" onclick="nextRound()">Next Round</button>
+      </div>
+    </div>
+
+    <div id="leader"></div>
+  </div>
+
+  <div id="userModal" class="modal" aria-hidden="true" role="dialog">
+    <div class="box">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">Edit users</h3>
+        <button class="btn" onclick="closeUserModal()">Close</button>
+      </div>
+      <p class="muted" style="margin-top:6px">Remove or add players to your local list.</p>
+      <div id="userList" style="margin:8px 0 12px"></div>
+      <div class="row">
+        <input id="modalNew" placeholder="Add player" style="flex:1; min-width:220px" onkeydown="if(event.key==='Enter') modalAdd()">
+        <button class="btn" onclick="modalAdd()">Add</button>
+        <button class="btn" onclick="resetCounts()">Reset counts</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const MEM_KEY = 'pa_players_freq_v1';
+function readFreq(){ try{ return JSON.parse(localStorage.getItem(MEM_KEY) || '{}'); }catch(e){ return {}; } }
+function writeFreq(obj){ localStorage.setItem(MEM_KEY, JSON.stringify(obj)); }
+function bumpFrequency(names){ const f=readFreq(); names.forEach(n=>{ f[n]=(f[n]||0)+1; }); writeFreq(f); renderChips(); }
+function ensureSeed(){ const f=readFreq(); if(Object.keys(f).length===0){ ['IAR','Vaduva','David','Radu','Andrei','Marcu','Daniel','Bogdan'].forEach(n=>f[n]=0); writeFreq(f); } }
+function sortedPlayers(){ const f=readFreq(); return Object.keys(f).sort((a,b)=> (f[b]-f[a]) || a.localeCompare(b)); }
+
+let currentTid = "{{ tid or '' }}";
+let currentRound = 0;
+let lastMatchCount = 0;
+let selected = new Set();
+
+function chipEl(name, freq){
+  const b = document.createElement('button');
+  b.type='button'; b.className='chip'; b.textContent=name; if(freq>0){ const s=document.createElement('small'); s.textContent='×'+freq; b.appendChild(s); }
+  b.onclick = ()=>{ if(selected.has(name)){ selected.delete(name); b.classList.remove('active'); } else { selected.add(name); b.classList.add('active'); } };
+  return b;
+}
+
+function renderChips(){
+  const box = document.getElementById('chips'); box.innerHTML='';
+  const f=readFreq();
+  sortedPlayers().forEach(n=>{ const el = chipEl(n, f[n]||0); if(selected.has(n)) el.classList.add('active'); box.appendChild(el); });
+}
+
+function addPlayer(){
+  const inp = document.getElementById('newPlayer');
+  const name = inp.value.trim(); if(!name) return;
+  const f=readFreq(); if(!(name in f)){ f[name]=0; writeFreq(f); }
+  selected.add(name); inp.value=''; renderChips();
+}
+
+function openUserModal(){ renderUserList(); const m=document.getElementById('userModal'); m.classList.add('show'); m.setAttribute('aria-hidden','false'); }
+function closeUserModal(){ const m=document.getElementById('userModal'); m.classList.remove('show'); m.setAttribute('aria-hidden','true'); }
+function renderUserList(){ const box=document.getElementById('userList'); const f=readFreq(); box.innerHTML=''; const names=sortedPlayers(); names.forEach(n=>{ const pill=document.createElement('span'); pill.className='pill'; const txt=document.createElement('span'); txt.textContent=n; const del=document.createElement('button'); del.innerHTML='✕'; del.title='Remove'; del.onclick=()=>{ const ff=readFreq(); delete ff[n]; writeFreq(ff); selected.delete(n); renderUserList(); renderChips(); }; pill.appendChild(txt); pill.appendChild(del); box.appendChild(pill); }); if(!names.length){ box.innerHTML='<span class="muted">No players yet</span>'; } }
+function modalAdd(){ const inp=document.getElementById('modalNew'); const name=inp.value.trim(); if(!name) return; const f=readFreq(); if(!(name in f)){ f[name]=0; writeFreq(f); } inp.value=''; renderUserList(); renderChips(); }
+function resetCounts(){ const f=readFreq(); Object.keys(f).forEach(k=>f[k]=0); writeFreq(f); renderUserList(); renderChips(); }
+
+async function j(url, opts){ const r = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{})); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+async function createTournament(){
+  const btn = document.getElementById('btnCreate'); if(btn.dataset.busy==='1') return;
+  const name = document.getElementById('name').value.trim();
+  const courts = parseInt(document.getElementById('courts').value,10)||1;
+  const players = Array.from(selected);
+  if(players.length < 4){ document.getElementById('createResult').textContent = 'Select at least 4 players'; return; }
+  btn.dataset.busy='1'; btn.disabled=true;
+  try{
+    const res = await j('/tournaments', {method:'POST', body: JSON.stringify({name, courts, players})});
+    document.getElementById('createResult').textContent = 'Created: '+res.id;
+    bumpFrequency(players);
+    await openTournament(res.id);
+    await nextRound();
+    await refreshLeader();
+  } finally { btn.dataset.busy=''; btn.disabled=false; }
+}
+
+async function openTournament(id){
+  currentTid = id;
+  const t = await j('/tournaments/'+id);
+  document.getElementById('panel').style.display='block';
+  document.getElementById('tname').textContent = t.name;
+  document.getElementById('tcourts').textContent = 'Courts: '+t.courts+'  •  Players: '+t.players.length;
+  await refreshRound();
+  await refreshLeader();
+}
+
+async function nextRound(){
+  if(!currentTid) return;
+  const btn = document.getElementById('btnNext'); if(btn){ if(btn.dataset.busy==='1') return; btn.dataset.busy='1'; btn.disabled=true; }
+  let r; try { r = await j('/tournaments/'+currentTid+'/rounds/next', {method:'POST'}); } finally { if(btn){ btn.dataset.busy=''; btn.disabled=false; } }
+  currentRound = r.round_idx;
+  renderMatches(r.matches);
+  document.getElementById('roundBox').style.display='block';
+  document.getElementById('roundTitle').textContent = 'Round '+currentRound;
+}
+
+async function refreshRound(){
+  if(!currentTid) return;
+  const r = await j('/tournaments/'+currentTid+'/rounds/current');
+  currentRound = r.round_idx;
+  if(currentRound>0){ renderMatches(r.matches); document.getElementById('roundBox').style.display='block'; document.getElementById('roundTitle').textContent = 'Round '+currentRound; }
+}
+
+function renderMatches(matches){
+  const box = document.getElementById('matches'); box.innerHTML=''; lastMatchCount = matches.length;
+  matches.forEach((m,i)=>{
+    const div = document.createElement('div'); div.className='court';
+    div.innerHTML = `<div class="court-title">Court ${m.court}</div>
+      <div class="teams"><span>${m.teamA[0]} & ${m.teamA[1]} vs ${m.teamB[0]} & ${m.teamB[1]}</span></div>
+      <div class="scorebar">
+        <div class="scoregroup" data-i="${i}" data-side="A">
+          <button class="step" onclick="step(${i},'A',-1)">−</button>
+          <input id="sa_${i}" type="number" min="0" step="1" placeholder="0">
+          <button class="step" onclick="step(${i},'A',1)">+</button>
+          <span class="muted">Team A</span>
+        </div>
+        <div class="scoregroup" data-i="${i}" data-side="B">
+          <button class="step" onclick="step(${i},'B',-1)">−</button>
+          <input id="sb_${i}" type="number" min="0" step="1" placeholder="0">
+          <button class="step" onclick="step(${i},'B',1)">+</button>
+          <span class="muted">Team B</span>
+        </div>
+        <div class="quick">
+
+        </div>
+      </div>`;
+    box.appendChild(div);
+  });
+}
+
+function getVals(i){ const a=parseInt(document.getElementById('sa_'+i).value||'0',10); const b=parseInt(document.getElementById('sb_'+i).value||'0',10); return [a,b]; }
+function setVals(i,a,b){ document.getElementById('sa_'+i).value = String(Math.max(0, a)); document.getElementById('sb_'+i).value = String(Math.max(0, b)); }
+function step(i,side,delta){ const [a,b]=getVals(i); if(side==='A') setVals(i,a+delta,b); else setVals(i,a,b+delta); }
+function quick(i,a,b){ setVals(i,a,b); }
+
+async function submitScores(){
+  const btn = document.getElementById('btnSubmit'); if(btn.dataset.busy==='1') return;
+  const scores = []; for(let i=0;i<lastMatchCount;i++){ const [a,b]=getVals(i); scores.push(`${a}-${b}`); }
+  btn.dataset.busy='1'; btn.disabled=true;
+  try { await j('/tournaments/'+currentTid+'/rounds/'+currentRound+'/scores', {method:'POST', body: JSON.stringify({scores})}); await refreshLeader(); }
+  catch(e){ console.error(e); alert('Could not submit scores: '+e); }
+  finally { btn.dataset.busy=''; btn.disabled=false; }
+}
+
+async function refreshLeader(){
+  if(!currentTid) return;
+  const rows = await j('/tournaments/'+currentTid+'/leaderboard');
+  const el = document.getElementById('leader');
+  let html = `<table><thead><tr><th>#</th><th>Player</th><th>Points</th><th>Matches Played</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{ html += `<tr><td>${i+1}</td><td>${r.player}</td><td>${r.points}</td><td>${r.matches}</td></tr>`; });
+  html += '</tbody></table>'; el.innerHTML = html;
+}
+
+ensureSeed();
+renderChips();
+if(currentTid) openTournament(currentTid);
+</script>
+</body>
+</html>

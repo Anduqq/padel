@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ t.name }} — Leaderboard</title>
+  <style>
+    :root{ --bg:#0b0f14; --panel:#121821; --edge:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --table-header:#0f172a; --hover:#0f1520; }
+    body{background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; max-width:720px; margin:24px auto; padding:0 12px}
+    .muted{color:var(--muted)}
+    table{width:100%; border-collapse:collapse}
+    th,td{padding:10px 12px; border-bottom:1px solid var(--edge); text-align:left}
+    thead th{position:sticky; top:0; background:var(--table-header)}
+    tbody tr:hover{background:var(--hover)}
+  </style>
+</head>
+<body>
+  <h2>{{ t.name }} <span class="muted">(courts: {{ am.courts }})</span></h2>
+  <p>Round: {{ am.round_idx }}</p>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Player</th><th>Points</th><th>Matches Played</th></tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ r.player }}</td>
+        <td>{{ r.points }}</td>
+        <td>{{ r.matches }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
